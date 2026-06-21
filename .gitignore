@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.claude
+.idea/
+
+# Internal working docs — distilled into DECISIONS.md / README; not part of the deliverable.
+PLAN.md
+TODO.md

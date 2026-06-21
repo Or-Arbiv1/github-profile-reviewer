@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GitHub Profile Reviewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Fira Sans', sans-serif;
+      background-color: #0F172A;
+      color: #F8FAFC;
+      min-height: 100vh;
+    }
+    .font-code { font-family: 'Fira Code', monospace; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-6xl mx-auto px-4 pt-10 pb-16">
+
+    <header class="mb-10">
+      <h1 class="text-xs font-medium text-slate-400 tracking-widest uppercase">GitHub Profile Reviewer</h1>
+    </header>
+
+    <section aria-label="Analyze a GitHub profile">
+      <div class="flex gap-3 mb-3">
+        <input
+          id="username-input"
+          type="text"
+          placeholder="username or https://github.com/username"
+          class="font-code flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base text-slate-50 placeholder:text-slate-500 focus:outline-none focus:border-green-500 transition-colors duration-150"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="GitHub username or profile URL"
+        />
+        <button
+          id="analyze-btn"
+          disabled
+          class="bg-green-500 hover:bg-green-600 text-slate-950 font-semibold px-6 py-3 rounded-xl transition-colors duration-150 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          <span id="btn-text">Analyze →</span>
+          <svg id="btn-spinner" class="hidden animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </button>
+      </div>
+      <p class="text-slate-400 text-sm">Enter a username or paste a GitHub profile URL</p>
+    </section>
+
+    <div id="banner" class="mt-10"></div>
+    <div id="results"></div>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
