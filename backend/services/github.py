@@ -55,9 +55,11 @@ async def aclose_client() -> None:
 
 
 def _raise_if_rate_limited(r: httpx.Response) -> None:
-    """A 403 with no remaining quota is a rate limit, not a generic failure.
-    Surface it as the actionable 'add a GITHUB_TOKEN' state from anywhere we call GitHub."""
-    if r.status_code == 403 and r.headers.get("X-RateLimit-Remaining") == "0":
+    """403 with no remaining quota = primary rate limit; 429 = secondary rate limit.
+    Both surface as the actionable 'add a GITHUB_TOKEN' state."""
+    is_primary = r.status_code == 403 and r.headers.get("X-RateLimit-Remaining") == "0"
+    is_secondary = r.status_code == 429
+    if is_primary or is_secondary:
         raise AnalyzeError(
             "github_rate_limit",
             429,

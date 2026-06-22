@@ -18,10 +18,11 @@ class RepoAssessment(BaseModel):
     language: str | None
     stars: int
     archived: bool = False  # the repo is the user's work but frozen (read-only)
+    summary: str | None = None  # neutral description of what the repo is; None == degraded card
     level: Level | None = None  # None == we couldn't assess this repo (AI call failed)
     readme_clarity: str   # e.g. "Clear", "Sparse", "Missing"
     complexity: str       # e.g. "Simple CRUD", "Non-trivial"
-    assessment: str       # 1–2 sentence human-readable summary
+    assessment: str       # the verdict: is this a good portfolio piece for a junior, + main takeaway
 
 
 class AnalyzeResponse(BaseModel):

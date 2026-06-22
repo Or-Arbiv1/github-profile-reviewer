@@ -52,55 +52,90 @@ async function analyze(username) {
 }
 
 // ─── Render helpers ──────────────────────────────────────────────────────────
-function levelBadge(level) {
-  const classes = {
-    Basic:        'bg-slate-700 text-slate-200',
-    Intermediate: 'bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30',
-    Advanced:     'bg-green-500/15 text-green-300 ring-1 ring-green-500/30',
-  };
-  // No level == the AI call for this repo failed; render a neutral "Unrated" badge.
-  const label = level ?? 'Unrated';
-  const cls = classes[level] ?? 'bg-slate-800 text-slate-500 ring-1 ring-slate-700';
-  return h('span', {
-    className: `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cls}`,
-  }, label);
+// The level is the card's rating, shown as a single-hue ramp — quality maps to how much
+// green is present, not to different colors. Basic = colorless slate (entry), Intermediate =
+// soft emerald, Advanced = bright emerald. Emerald is the app's one accent (also focus/hover);
+// the button is intentionally neutral so nothing competes with it. `accent` colors the
+// verdict's left border so the opinion is visibly tied to the rating.
+const LEVEL_STYLE = {
+  Basic:        { chip: 'bg-slate-500/10 text-slate-400',     accent: 'border-slate-600' },
+  Intermediate: { chip: 'bg-emerald-500/10 text-emerald-300', accent: 'border-emerald-500/30' },
+  Advanced:     { chip: 'bg-emerald-500/20 text-emerald-200', accent: 'border-emerald-500/60' },
+};
+// No level == the AI call for this repo failed; show a muted "Unrated" reading.
+const UNRATED_STYLE = { chip: 'bg-slate-700/50 text-slate-400', accent: 'border-slate-700' };
+
+// Display order: most-starred first (social proof leads), then complexity as the tiebreaker.
+// Because stars is the primary key, every starred repo sorts above the zero-star ones, and the
+// zero-star repos fall through to complexity among themselves. `complexity` is free-text with
+// no inherent order, so we rank on `level` — its ordinal equivalent (Basic→Advanced); unrated
+// sinks last. The backend still selects repos by recency — this is purely how we present them.
+const LEVEL_RANK = { Advanced: 3, Intermediate: 2, Basic: 1 };
+function byStarsThenComplexity(a, b) {
+  if (a.stars !== b.stars) return b.stars - a.stars;                 // most stars first
+  return (LEVEL_RANK[b.level] ?? 0) - (LEVEL_RANK[a.level] ?? 0);    // then by complexity (level)
 }
 
+function levelChip(level) {
+  const s = LEVEL_STYLE[level] ?? UNRATED_STYLE;
+  return h('span', {
+    className: `inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wide ${s.chip}`,
+  }, level ?? 'Unrated');
+}
+
+// Vertical card, top → bottom: title · level · language·complexity · summary · verdict.
+// Each field gets its own line and its own weight — no inner dividers, no pill backgrounds —
+// so the structure reads through typography (size + brightness) instead of nested boxes.
 function renderCard(repo) {
+  const accent = (LEVEL_STYLE[repo.level] ?? UNRATED_STYLE).accent;
+
   const card = h('div', {
-    className: 'bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col gap-3 hover:border-slate-600 transition-colors duration-200',
+    className: 'bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 flex flex-col gap-3 '
+      + 'hover:border-slate-600 transition-colors duration-200'
+      + (repo.archived ? ' opacity-75' : ''),  // frozen work visibly recedes without hiding it
   });
 
-  // name + stars
-  const nameLink = h('a', {
-    href: repo.url, target: '_blank', rel: 'noopener noreferrer',
-    className: 'font-code font-semibold text-slate-50 hover:text-green-400 transition-colors duration-150 truncate',
-  }, repo.name);
-  const stars = h('span', { className: 'text-slate-400 text-sm shrink-0' }, `★ ${repo.stars}`);
-  card.appendChild(h('div', { className: 'flex items-start justify-between gap-2' }, nameLink, stars));
+  // Title row: repo name (left, brightest — the headline and the link, truncates) + stars (right).
+  card.appendChild(h('div', { className: 'flex items-center gap-3' },
+    h('a', {
+      href: repo.url, target: '_blank', rel: 'noopener noreferrer',
+      title: repo.name,  // truncated long names are still readable on hover + to assistive tech
+      className: 'font-code font-semibold text-slate-50 hover:text-emerald-400 transition-colors duration-150 truncate min-w-0 flex-1',
+    }, repo.name),
+    h('span', { className: 'text-amber-400/80 text-sm shrink-0' }, `★ ${repo.stars}`),
+  ));
 
-  // level badge + (archived tag) + language
-  const meta = h('div', { className: 'flex items-center gap-2 flex-wrap' }, levelBadge(repo.level));
+  // Level: the rating, small and left-aligned under the title (the name is the headline; this
+  // is the verdict's one-word tag). Archived sits alongside it when present.
+  const meta = h('div', { className: 'flex items-center gap-2 flex-wrap' }, levelChip(repo.level));
   if (repo.archived) {
     meta.appendChild(h('span', {
-      className: 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30',
+      className: 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-300',
     }, 'Archived'));
   }
-  if (repo.language) meta.appendChild(h('span', { className: 'text-slate-400 text-xs' }, repo.language));
   card.appendChild(meta);
 
-  // label / value rows
-  function row(label, value) {
-    return h('div', { className: 'flex gap-1.5 text-sm' },
-      h('span', { className: 'text-slate-500 shrink-0' }, label + ':'),
-      h('span', { className: 'text-slate-300' }, value),
-    );
+  // Language · complexity — plain monospace text, no chips. The two facts the verdict doesn't
+  // already carry. "—" placeholders (degraded cards) are skipped.
+  const facts = [];
+  if (repo.language) facts.push(repo.language);
+  if (repo.complexity && repo.complexity !== '—') facts.push(repo.complexity);
+  if (facts.length) {
+    card.appendChild(h('p', { className: 'font-code text-xs text-slate-400' }, facts.join('  ·  ')));
   }
-  card.appendChild(row('README', repo.readme_clarity));
-  card.appendChild(row('Complexity', repo.complexity));
 
-  // assessment
-  card.appendChild(h('p', { className: 'text-slate-400 text-sm leading-relaxed' }, repo.assessment));
+  // summary = neutral description ("what it is"). Quiet (slate-400), clamped — sits below the
+  // verdict in the visual hierarchy. Skipped on degraded cards where summary is null.
+  if (repo.summary) {
+    card.appendChild(h('p', { className: 'text-slate-400 text-sm leading-snug line-clamp-2' }, repo.summary));
+  }
+
+  // assessment = the verdict ("is it good, for a junior?"). The loudest body text on the card
+  // (bright slate-200); a thin accent bar in the level's color is the only inner element, tying
+  // the prose to the rating. mt-auto pins it to the card's bottom so the grid stays aligned.
+  card.appendChild(h('p', {
+    className: `text-sm text-slate-200 leading-relaxed border-l-2 ${accent} pl-3 mt-auto`,
+  }, repo.assessment));
 
   return card;
 }
@@ -138,8 +173,8 @@ function repoSummary(d) {
              + `· ${d.failed_count} couldn't be assessed`;
   } else {
     analyzed = attempted < ownRepos
-      ? `analyzed the ${attempted} most recently updated`
-      : `analyzed all ${attempted}`;
+      ? `analyzed the ${attempted} most recently updated repos`
+      : `analyzed all ${attempted} repos`;
   }
 
   return `${inventory} — ${analyzed}`;
@@ -251,7 +286,7 @@ function render() {
     banner.appendChild(renderBanner(d));
     results.appendChild(h('p', { className: 'text-slate-400 text-sm mb-4' }, repoSummary(d)));
     const grid = h('div', { className: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' });
-    for (const repo of d.repos) grid.appendChild(renderCard(repo));
+    for (const repo of [...d.repos].sort(byStarsThenComplexity)) grid.appendChild(renderCard(repo));
     results.appendChild(grid);
   }
 }
