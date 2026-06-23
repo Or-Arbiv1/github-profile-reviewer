@@ -83,6 +83,18 @@ Return JSON only. Field constraints:
             )
         except anthropic.AuthenticationError:
             raise AnalyzeError("ai_auth", 502, "AI API key is invalid or expired.")
+        except anthropic.PermissionDeniedError:
+            # 403: the key is valid but the request is refused — for a key provisioned for this
+            # review, the overwhelmingly likely cause is an exhausted spend cap. Systemic.
+            raise AnalyzeError(
+                "ai_access", 502, "AI request denied — most likely the key's spend cap has been reached."
+            )
+        except anthropic.NotFoundError:
+            # 404 from messages.create means the model id doesn't exist (bad AI_MODEL).
+            # Systemic: it fails every repo identically, so surface the one fix, not N cards.
+            raise AnalyzeError(
+                "ai_model", 502, f"AI model '{settings.ai_model}' not found. Check AI_MODEL in .env."
+            )
         except Exception:
             # Log the real detail server-side; never leak SDK internals to the client.
             logger.exception("AI assess_repo call failed for %r", repo.get("name"))
@@ -142,6 +154,14 @@ Good example of the tone, decisiveness, and grounding to aim for (do not copy it
             )
         except anthropic.AuthenticationError:
             raise AnalyzeError("ai_auth", 502, "AI API key is invalid or expired.")
+        except anthropic.PermissionDeniedError:
+            raise AnalyzeError(
+                "ai_access", 502, "AI request denied — most likely the key's spend cap has been reached."
+            )
+        except anthropic.NotFoundError:
+            raise AnalyzeError(
+                "ai_model", 502, f"AI model '{settings.ai_model}' not found. Check AI_MODEL in .env."
+            )
         except Exception:
             logger.exception("AI synthesize call failed")
             raise AnalyzeError("upstream", 502, "The AI service failed to respond.")

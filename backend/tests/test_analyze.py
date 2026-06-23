@@ -81,6 +81,30 @@ def test_invalid_ai_key(client, monkeypatch):
     assert resp.json()["error"]["code"] == "ai_auth"
 
 
+def test_invalid_ai_model_aborts_with_ai_model(client, monkeypatch):
+    # A wrong AI_MODEL fails every repo identically, so it must abort fast with the one fix —
+    # not degrade to N "Unrated" cards and then masquerade as a generic 'upstream' error.
+    class _BadModelProvider:
+        async def assess_repo(self, repo, readme):
+            raise AnalyzeError("ai_model", 502, "AI model 'nope' not found. Check AI_MODEL in .env.")
+
+        async def synthesize(self, assessments):
+            raise AnalyzeError("ai_model", 502, "AI model 'nope' not found. Check AI_MODEL in .env.")
+
+    good = dict(FAKE_REPO, name="good-repo")
+    bad = dict(FAKE_REPO, name="bad-repo")
+    monkeypatch.setattr(
+        "backend.services.github.list_repos",
+        AsyncMock(return_value=_fetch([good, bad], total_found=2)),
+    )
+    monkeypatch.setattr("backend.services.github.get_readme", AsyncMock(return_value="Some readme"))
+    monkeypatch.setattr("backend.services.analyzer.get_provider", lambda: _BadModelProvider())
+
+    resp = client.post("/analyze", json={"username": "testuser"})
+    assert resp.status_code == 502
+    assert resp.json()["error"]["code"] == "ai_model"  # aborted, not degraded
+
+
 def test_no_readme_still_produces_assessment(client, monkeypatch):
     monkeypatch.setattr("backend.services.github.list_repos", AsyncMock(return_value=_fetch([FAKE_REPO])))
     monkeypatch.setattr("backend.services.github.get_readme", AsyncMock(return_value=""))

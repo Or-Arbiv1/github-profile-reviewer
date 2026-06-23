@@ -45,6 +45,11 @@ def _auth_error():
     return anthropic.AuthenticationError.__new__(anthropic.AuthenticationError)
 
 
+# A bad model id makes messages.create raise NotFoundError (404). Same bypass trick as above.
+def _not_found_error():
+    return anthropic.NotFoundError.__new__(anthropic.NotFoundError)
+
+
 REPO = {
     "name": "demo",
     "html_url": "https://github.com/u/demo",
@@ -100,6 +105,14 @@ def test_assess_repo_generic_error_is_upstream():
     assert exc.value.code == "upstream"
 
 
+def test_assess_repo_not_found_is_ai_model():
+    # A bad AI_MODEL → 404 → distinct, actionable 'ai_model' state, not a generic upstream blip.
+    provider = _provider(_FakeMessages(error=_not_found_error()))
+    with pytest.raises(AnalyzeError) as exc:
+        asyncio.run(provider.assess_repo(REPO, ""))
+    assert exc.value.code == "ai_model"
+
+
 def test_synthesize_returns_text():
     provider = _provider(_FakeMessages(response=_Response([_Block("text", text="Overall: strong.")])))
     out = asyncio.run(provider.synthesize([
@@ -122,3 +135,10 @@ def test_synthesize_no_text_block_is_upstream():
     with pytest.raises(AnalyzeError) as exc:
         asyncio.run(provider.synthesize([]))
     assert exc.value.code == "upstream"
+
+
+def test_synthesize_not_found_is_ai_model():
+    provider = _provider(_FakeMessages(error=_not_found_error()))
+    with pytest.raises(AnalyzeError) as exc:
+        asyncio.run(provider.synthesize([]))
+    assert exc.value.code == "ai_model"

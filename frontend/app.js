@@ -3,7 +3,7 @@ const state = { status: 'idle', username: '', data: null, error: null };
 
 // ─── Safe DOM builder ────────────────────────────────────────────────────────
 // Strings become text nodes — never innerHTML — so user/AI content can't inject HTML.
-function h(tag, attrs, ...children) {
+function createEl(tag, attrs, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (k === 'className') el.className = v;
@@ -78,7 +78,7 @@ function byStarsThenComplexity(a, b) {
 
 function levelChip(level) {
   const s = LEVEL_STYLE[level] ?? UNRATED_STYLE;
-  return h('span', {
+  return createEl('span', {
     className: `inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wide ${s.chip}`,
   }, level ?? 'Unrated');
 }
@@ -89,27 +89,27 @@ function levelChip(level) {
 function renderCard(repo) {
   const accent = (LEVEL_STYLE[repo.level] ?? UNRATED_STYLE).accent;
 
-  const card = h('div', {
+  const card = createEl('div', {
     className: 'bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 flex flex-col gap-3 '
       + 'hover:border-slate-600 transition-colors duration-200'
       + (repo.archived ? ' opacity-75' : ''),  // frozen work visibly recedes without hiding it
   });
 
   // Title row: repo name (left, brightest — the headline and the link, truncates) + stars (right).
-  card.appendChild(h('div', { className: 'flex items-center gap-3' },
-    h('a', {
+  card.appendChild(createEl('div', { className: 'flex items-center gap-3' },
+    createEl('a', {
       href: repo.url, target: '_blank', rel: 'noopener noreferrer',
       title: repo.name,  // truncated long names are still readable on hover + to assistive tech
       className: 'font-code font-semibold text-slate-50 hover:text-emerald-400 transition-colors duration-150 truncate min-w-0 flex-1',
     }, repo.name),
-    h('span', { className: 'text-amber-400/80 text-sm shrink-0' }, `★ ${repo.stars}`),
+    createEl('span', { className: 'text-amber-400/80 text-sm shrink-0' }, `★ ${repo.stars}`),
   ));
 
   // Level: the rating, small and left-aligned under the title (the name is the headline; this
   // is the verdict's one-word tag). Archived sits alongside it when present.
-  const meta = h('div', { className: 'flex items-center gap-2 flex-wrap' }, levelChip(repo.level));
+  const meta = createEl('div', { className: 'flex items-center gap-2 flex-wrap' }, levelChip(repo.level));
   if (repo.archived) {
-    meta.appendChild(h('span', {
+    meta.appendChild(createEl('span', {
       className: 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/15 text-amber-300',
     }, 'Archived'));
   }
@@ -121,19 +121,19 @@ function renderCard(repo) {
   if (repo.language) facts.push(repo.language);
   if (repo.complexity && repo.complexity !== '—') facts.push(repo.complexity);
   if (facts.length) {
-    card.appendChild(h('p', { className: 'font-code text-xs text-slate-400' }, facts.join('  ·  ')));
+    card.appendChild(createEl('p', { className: 'font-code text-xs text-slate-400' }, facts.join('  ·  ')));
   }
 
   // summary = neutral description ("what it is"). Quiet (slate-400), clamped — sits below the
   // verdict in the visual hierarchy. Skipped on degraded cards where summary is null.
   if (repo.summary) {
-    card.appendChild(h('p', { className: 'text-slate-400 text-sm leading-snug line-clamp-2' }, repo.summary));
+    card.appendChild(createEl('p', { className: 'text-slate-400 text-sm leading-snug line-clamp-2' }, repo.summary));
   }
 
   // assessment = the verdict ("is it good, for a junior?"). The loudest body text on the card
   // (bright slate-200); a thin accent bar in the level's color is the only inner element, tying
   // the prose to the rating. mt-auto pins it to the card's bottom so the grid stays aligned.
-  card.appendChild(h('p', {
+  card.appendChild(createEl('p', {
     className: `text-sm text-slate-200 leading-relaxed border-l-2 ${accent} pl-3 mt-auto`,
   }, repo.assessment));
 
@@ -143,12 +143,12 @@ function renderCard(repo) {
 function renderSkeletons(n) {
   const frag = document.createDocumentFragment();
   for (let i = 0; i < n; i++) {
-    const card = h('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col gap-3 animate-pulse' });
-    card.appendChild(h('div', { className: 'h-4 bg-slate-700 rounded w-3/4' }));
-    card.appendChild(h('div', { className: 'h-3 bg-slate-700 rounded w-1/4' }));
-    card.appendChild(h('div', { className: 'h-3 bg-slate-700 rounded w-1/2' }));
-    card.appendChild(h('div', { className: 'h-3 bg-slate-700 rounded w-2/3' }));
-    card.appendChild(h('div', { className: 'h-10 bg-slate-700 rounded' }));
+    const card = createEl('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col gap-3 animate-pulse' });
+    card.appendChild(createEl('div', { className: 'h-4 bg-slate-700 rounded w-3/4' }));
+    card.appendChild(createEl('div', { className: 'h-3 bg-slate-700 rounded w-1/4' }));
+    card.appendChild(createEl('div', { className: 'h-3 bg-slate-700 rounded w-1/2' }));
+    card.appendChild(createEl('div', { className: 'h-3 bg-slate-700 rounded w-2/3' }));
+    card.appendChild(createEl('div', { className: 'h-10 bg-slate-700 rounded' }));
     frag.appendChild(card);
   }
   return frag;
@@ -181,18 +181,18 @@ function repoSummary(d) {
 }
 
 function renderBanner(d) {
-  const banner = h('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5 mb-4' });
-  banner.appendChild(h('p', { className: 'text-slate-400 text-xs uppercase tracking-wider mb-2' }, 'Overall Assessment'));
-  banner.appendChild(h('p', { className: 'text-slate-100 leading-relaxed' }, d.synthesis));
+  const banner = createEl('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5 mb-4' });
+  banner.appendChild(createEl('p', { className: 'text-slate-400 text-xs uppercase tracking-wider mb-2' }, 'Overall Assessment'));
+  banner.appendChild(createEl('p', { className: 'text-slate-100 leading-relaxed' }, d.synthesis));
   return banner;
 }
 
 function renderError(err) {
-  const card = h('div', { className: 'bg-red-500/10 border border-red-500/30 rounded-xl p-5' });
-  card.appendChild(h('p', { className: 'text-red-400 text-xs uppercase tracking-wider font-medium mb-2' }, 'Error'));
+  const card = createEl('div', { className: 'bg-red-500/10 border border-red-500/30 rounded-xl p-5' });
+  card.appendChild(createEl('p', { className: 'text-red-400 text-xs uppercase tracking-wider font-medium mb-2' }, 'Error'));
 
-  const code = err?.code;
-  if (code === 'user_not_found') {
+  const errorCode = err?.code;
+  if (errorCode === 'user_not_found') {
     const p = document.createElement('p');
     p.className = 'text-slate-200';
     p.appendChild(document.createTextNode('No GitHub user named '));
@@ -201,16 +201,25 @@ function renderError(err) {
     p.appendChild(b);
     p.appendChild(document.createTextNode('. Check the spelling.'));
     card.appendChild(p);
-  } else if (code === 'github_rate_limit') {
-    card.appendChild(h('p', { className: 'text-slate-200' },
+  } else if (errorCode === 'github_rate_limit') {
+    card.appendChild(createEl('p', { className: 'text-slate-200' },
       'GitHub rate limit reached. Add a GITHUB_TOKEN to .env (see README) to raise it to 5,000/hr.'
     ));
-  } else if (code === 'ai_auth') {
-    card.appendChild(h('p', { className: 'text-slate-200' },
+  } else if (errorCode === 'ai_auth') {
+    card.appendChild(createEl('p', { className: 'text-slate-200' },
       'AI API key invalid or expired. Set a valid AI_API_KEY in .env (see README).'
     ));
+  } else if (errorCode === 'ai_model') {
+    // Backend message names the offending model id; surface it as-is, then point at the README.
+    card.appendChild(createEl('p', { className: 'text-slate-200' },
+      `${err?.message ?? 'AI model not found.'} (see README)`
+    ));
+  } else if (errorCode === 'ai_access') {
+    card.appendChild(createEl('p', { className: 'text-slate-200' },
+      err?.message ?? 'AI request denied — most likely the spend cap has been reached.'
+    ));
   } else {
-    card.appendChild(h('p', { className: 'text-slate-200' },
+    card.appendChild(createEl('p', { className: 'text-slate-200' },
       err?.message ?? 'Something went wrong reaching an upstream service. Try again.'
     ));
   }
@@ -240,15 +249,15 @@ function render() {
 
     // Static label: the repo count isn't known client-side until the single blocking
     // /analyze response returns, so the loader is intentionally count-less.
-    banner.appendChild(h('p', { className: 'text-slate-400 text-sm mb-3' }, 'Analyzing repos…'));
+    banner.appendChild(createEl('p', { className: 'text-slate-400 text-sm mb-3' }, 'Analyzing repos…'));
 
-    const sb = h('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5 mb-4 animate-pulse' });
-    sb.appendChild(h('div', { className: 'h-3 bg-slate-700 rounded w-1/4 mb-3' }));
-    sb.appendChild(h('div', { className: 'h-4 bg-slate-700 rounded w-full mb-2' }));
-    sb.appendChild(h('div', { className: 'h-4 bg-slate-700 rounded w-3/4' }));
+    const sb = createEl('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5 mb-4 animate-pulse' });
+    sb.appendChild(createEl('div', { className: 'h-3 bg-slate-700 rounded w-1/4 mb-3' }));
+    sb.appendChild(createEl('div', { className: 'h-4 bg-slate-700 rounded w-full mb-2' }));
+    sb.appendChild(createEl('div', { className: 'h-4 bg-slate-700 rounded w-3/4' }));
     banner.appendChild(sb);
 
-    const grid = h('div', { className: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' });
+    const grid = createEl('div', { className: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' });
     grid.appendChild(renderSkeletons(6));
     results.appendChild(grid);
     return;
@@ -264,8 +273,8 @@ function render() {
 
   if (state.status === 'empty') {
     const d = state.data;
-    const card = h('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5' });
-    card.appendChild(h('p', { className: 'text-slate-400 text-xs uppercase tracking-wider mb-2' }, 'Nothing to analyze'));
+    const card = createEl('div', { className: 'bg-slate-800 border border-slate-700 rounded-xl p-5' });
+    card.appendChild(createEl('p', { className: 'text-slate-400 text-xs uppercase tracking-wider mb-2' }, 'Nothing to analyze'));
     let msg;
     if (!d || d.total_found === 0) {
       msg = `${state.username} has no public repositories.`;
@@ -276,7 +285,7 @@ function render() {
         ? `Found ${n} ${repoWord}, but ${n === 1 ? 'it is a fork' : 'all are forks'} — no original work to analyze.`
         : `Found ${n} ${repoWord} (${own} non-fork), but none produced anything to show.`;
     }
-    card.appendChild(h('p', { className: 'text-slate-200' }, msg));
+    card.appendChild(createEl('p', { className: 'text-slate-200' }, msg));
     banner.appendChild(card);
     return;
   }
@@ -284,8 +293,8 @@ function render() {
   if (state.status === 'success') {
     const d = state.data;
     banner.appendChild(renderBanner(d));
-    results.appendChild(h('p', { className: 'text-slate-400 text-sm mb-4' }, repoSummary(d)));
-    const grid = h('div', { className: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' });
+    results.appendChild(createEl('p', { className: 'text-slate-400 text-sm mb-4' }, repoSummary(d)));
+    const grid = createEl('div', { className: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' });
     for (const repo of [...d.repos].sort(byStarsThenComplexity)) grid.appendChild(renderCard(repo));
     results.appendChild(grid);
   }
