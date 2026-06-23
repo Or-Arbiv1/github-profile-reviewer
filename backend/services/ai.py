@@ -112,19 +112,31 @@ Return JSON only. Field constraints:
 
     async def synthesize(self, assessments: list[RepoAssessment]) -> str:
         lines = "\n".join(
-            f"- {a.name} ({a.level.value if a.level else 'Unrated'}): {a.assessment}"
+            f"- {a.name} — {a.language or 'unknown language'}, "
+            f"level: {a.level.value if a.level else 'Unrated'}, "
+            f"README: {a.readme_clarity}, {a.complexity}\n"
+            f"  What it is: {a.summary or 'n/a'}\n"
+            f"  Verdict: {a.assessment}"
             for a in assessments
         )
-        prompt = f"""You have assessed {len(assessments)} GitHub repositories for a developer:
+        prompt = f"""You have assessed {len(assessments)} GitHub repositories for a developer. The list below is the ONLY evidence you have about this developer — every claim you make must be supported by it.
 
 {lines}
 
-Write 2-3 sentences synthesizing their overall level, strongest demonstrated skills, and notable gaps. Then you MUST end with a clear verdict sentence that explicitly states whether this developer is a good candidate for a junior full-stack developer role and the main reason why. Always give the verdict — never omit it. Be specific and direct."""
+Write a SHORT overall assessment — maximum 80 words, flowing prose. No headings, no bullet lists, and do NOT walk through the repos one by one. Cover, in order:
+- The developer's overall level and strongest demonstrated skills, in general terms. Name repos sparingly — only when one genuinely illustrates a point — never as a roster.
+- Their single strongest project: name it and say what makes it stand out, citing the concrete capabilities from that repo's verdict line (e.g. "async concurrency, structured tool calling, latency optimization") rather than generic praise like "production-grade thinking".
+- A clear closing verdict. It MUST begin with "Yes" or "No" (or "Yes, with reservations"), state plainly whether this developer is a good candidate for a junior full-stack developer role, and give the single main reason. Always give the verdict, do not bury it behind a condition, and never omit it.
+
+You may note at most one gap, and only if the evidence above genuinely shows it. Before naming any gap, scan every repo line above: if ANY repo's verdict demonstrates that skill, you may NOT name it as a gap (e.g. do not call testing a gap if any repo shows test automation). Do NOT list generic junior-developer weaknesses such as testing, databases, deployment, or CI unless you can point to a specific repo line as evidence; if you can't, omit the gap entirely. Keep every claim supported by the evidence above. Be specific, direct, and stay within 80 words.
+
+Good example of the tone, decisiveness, and grounding to aim for (do not copy its content — it describes a different developer):
+"This developer shows solid intermediate competence across desktop apps, game logic, and test automation. Their standout project is data-pipeline-cli, which demonstrates genuine depth: async concurrency, structured tool calling, production error handling, and latency optimization well beyond typical junior work. Yes, a strong candidate for junior full-stack roles — the mix of architectural thinking, problem-solving across domains, and one genuinely sophisticated project signals readiness for real-world development." """
 
         try:
             response = await self._client.messages.create(
                 model=settings.ai_model,
-                max_tokens=400,
+                max_tokens=600,  # comfortable margin so a ~4-sentence verdict is never cut mid-sentence
                 temperature=0,  # the verdict is a conclusion, not creative copy — keep it stable
                 messages=[{"role": "user", "content": prompt}],
             )
