@@ -44,6 +44,20 @@ A tool that takes a GitHub username (or profile URL), fetches the user's public 
   `submit_assessment` tool whose `input_schema` is the four fields, then validates the returned
   `.input` through a private pydantic model before building the `RepoAssessment` — off-schema
   output fails closed to a degraded card rather than a malformed response.
+- **`temperature=0` on both AI calls (added during build).** Assessments are classifications,
+  not creative copy: the same profile run twice was producing different `level` badges (e.g.
+  "Advanced" vs "Intermediate" for the same repo) and a differently-worded synthesis. The default
+  temperature is `1.0` (full sampling), so each run was an independent draw. Both `assess_repo`
+  and `synthesize` are pinned to `0` — the synthesis verdict (the headline hire/no-hire signal) is
+  a conclusion that especially must not flip between runs. Caveat: there is no seed parameter, so
+  output is highly stable but not byte-identical guaranteed; the rubric below is what actually
+  anchors the decision, temperature just stops it wandering.
+- **`level` has an explicit rubric, like `readme_clarity`.** The enum alone ("Basic / Intermediate
+  / Advanced") gave the model no boundaries, so borderline repos straddled two buckets and the
+  low-temperature fix had nothing to lock onto. Each level now carries a definition (Basic =
+  scripts/tutorials; Intermediate = one solid working app; Advanced = multiple services /
+  concurrency / structured AI calling / production concerns), plus an explicit instruction not to
+  inflate for stars or a polished README alone.
 - **Temporary dev scaffolding — `MOCK_AI` + `MockProvider`:** so the app runs end-to-end with
   no key while the real path is unverified, `get_provider()` returns a `MockProvider` (randomized
   canned assessments) when `MOCK_AI=true`. `ai_api_key` is correspondingly `str | None` for now.

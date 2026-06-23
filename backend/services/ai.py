@@ -43,6 +43,10 @@ README (may be truncated):
 Return JSON only. Field constraints:
 - summary: maximum 8 words neutrally describing what the project IS (e.g. "REST API for tracking personal expenses", "CLI tool for converting markdown files"). Description only — no judgement.
 - level: exactly one of "Basic", "Intermediate", "Advanced"
+  - "Basic": scripts, tutorial follow-alongs, or single-file exercises; little structure and no real architecture
+  - "Intermediate": a single working application with sensible structure (e.g. one full-stack app, a CRUD API, a CLI with real features); demonstrates competence but stays within one well-trodden pattern
+  - "Advanced": integrates multiple services or non-trivial concerns — concurrency control, structured AI/tool calling, production handling (error paths, retries, rate limits), or thoughtful architecture beyond a single straightforward app
+  - Judge the strongest evidence in the repo; do NOT inflate for stars or a polished README alone
 - readme_clarity: exactly one of "Clear", "Adequate", "Sparse", "Trivial", "Missing"
   - "Missing": no README file exists
   - "Trivial": README exists but contains only auto-generated content (repo name or GitHub's default template, no real writing)
@@ -72,6 +76,7 @@ Return JSON only. Field constraints:
             response = await self._client.messages.create(
                 model=settings.ai_model,
                 max_tokens=1024,
+                temperature=0,  # classification must be stable run-to-run, not sampled
                 tools=[_tool],
                 tool_choice={"type": "tool", "name": "submit_assessment"},
                 messages=[{"role": "user", "content": prompt}],
@@ -120,6 +125,7 @@ Write 2-3 sentences synthesizing their overall level, strongest demonstrated ski
             response = await self._client.messages.create(
                 model=settings.ai_model,
                 max_tokens=400,
+                temperature=0,  # the verdict is a conclusion, not creative copy — keep it stable
                 messages=[{"role": "user", "content": prompt}],
             )
         except anthropic.AuthenticationError:
