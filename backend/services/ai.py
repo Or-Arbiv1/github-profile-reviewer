@@ -172,44 +172,7 @@ Good example of the tone, decisiveness, and grounding to aim for (do not copy it
         return block.text
 
 
-class MockProvider:
-    # Dev-only fake; deleted at submission (see TODO cleanup). Emits MAX-bounded text
-    # (summary 8 words, complexity 3, assessment 30, ~4-sentence synthesis) so the card
-    # and banner layout can be stress-tested against worst-case lengths without a real key.
-    # Levels/clarity stay randomized so every badge variant still shows up.
-    async def assess_repo(self, repo: dict, readme: str) -> RepoAssessment:
-        import random
-        level = random.choice(list(Level))
-        clarity = "Missing" if not readme else random.choice(["Clear", "Adequate", "Sparse", "Trivial"])
-        return RepoAssessment(
-            name=repo["name"],
-            url=repo.get("html_url", ""),
-            language=repo.get("language"),
-            stars=repo.get("stargazers_count", 0),
-            archived=repo.get("archived", False),
-            summary="A comprehensive full-stack web application managing complex inventory",  # 8 words
-            level=level,
-            readme_clarity=clarity,
-            complexity="Complex full-stack project",  # 3 words
-            assessment=(  # 30 words
-                "Genuinely strong intermediate work with clean modular structure and thoughtful "
-                "abstractions; the README is clear with thorough setup steps and examples, "
-                "reflecting real comfort building production applications end to end"
-            ),
-        )
-
-    async def synthesize(self, assessments: list[RepoAssessment]) -> str:
-        return (
-            "This developer demonstrates solid intermediate ability across a varied portfolio, "
-            "with consistent project structure and a clear grasp of full-stack fundamentals. "
-            "Their strongest work shows comfort with REST APIs, data modelling, and clean "
-            "separation of concerns, though automated testing and CI are notably thin throughout. "
-            "Overall they are a good candidate for a junior full-stack role, mainly because the "
-            "breadth and consistency of working, well-documented projects outweigh the gaps."
-        )
-
-
 def get_provider() -> AIProvider:
-    if settings.mock_ai:
-        return MockProvider()
+    # The one place the provider is wired. The rest of the app depends only on the AIProvider interface, which is also
+    # the seam the tests patch to inject a fake provider and run offline.
     return AnthropicProvider()

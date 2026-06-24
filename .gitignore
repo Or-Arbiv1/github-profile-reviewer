@@ -7,6 +7,8 @@ __pycache__/
 .claude
 .idea/
 
-# Internal working docs — distilled into DECISIONS.md / README; not part of the deliverable.
+# Internal working docs — distilled into the README; kept locally for development,
+# not part of the shipped deliverable.
 PLAN.md
 TODO.md
+DECISIONS.md
