@@ -9,9 +9,10 @@ from backend.services.ai import get_provider
 logger = logging.getLogger("github_profile_reviewer")
 
 # Codes that affect every repo identically: a bad key, a denied request (e.g. spend cap),
-# a wrong model id, or an exhausted rate limit will fail all calls the same way. Surfacing the
-# one actionable fix beats rendering N broken cards — so these abort instead of going per-repo.
-_SYSTEMIC = {"ai_auth", "ai_access", "ai_model", "github_rate_limit"}
+# a wrong model id, or an exhausted rate limit (GitHub's or the AI's) will fail all calls the
+# same way. Surfacing the one actionable fix beats rendering N broken cards — so these abort
+# instead of going per-repo.
+_SYSTEMIC = {"ai_auth", "ai_access", "ai_model", "ai_rate_limit", "github_auth", "github_rate_limit"}
 
 
 def _failed_card(repo: dict) -> RepoAssessment:

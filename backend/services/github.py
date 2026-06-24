@@ -54,9 +54,15 @@ async def aclose_client() -> None:
         _client = None
 
 
-def _raise_if_rate_limited(r: httpx.Response) -> None:
-    """403 with no remaining quota = primary rate limit; 429 = secondary rate limit.
-    Both surface as the actionable 'add a GITHUB_TOKEN' state."""
+def _raise_for_status(r: httpx.Response, context: str = "") -> None:
+    """Map every non-200 we don't handle specially into an AnalyzeError. The caller handles 404
+    first, because its meaning differs per endpoint (no such user vs. no README). `context` only
+    tails the generic fallback message so the caller can say which call failed.
+
+    Order matters: rate-limit and auth carry an actionable fix, so they must be matched before
+    the generic fallback swallows them as a bland 'GitHub returned X'."""
+    # 403 with no remaining quota = primary rate limit; 429 = secondary. Both surface as the
+    # actionable 'add a GITHUB_TOKEN' state.
     is_primary = r.status_code == 403 and r.headers.get("X-RateLimit-Remaining") == "0"
     is_secondary = r.status_code == 429
     if is_primary or is_secondary:
@@ -65,6 +71,17 @@ def _raise_if_rate_limited(r: httpx.Response) -> None:
             429,
             "GitHub rate limit reached. Add GITHUB_TOKEN to .env to raise it to 5,000/hr.",
         )
+    # 401 = the configured GITHUB_TOKEN is bad (invalid/expired/revoked). GitHub does NOT fall
+    # back to anonymous access for a present-but-invalid token — every call 401s identically — so
+    # this is systemic: surface the one fix, and don't confuse it with a rate limit.
+    if r.status_code == 401:
+        raise AnalyzeError(
+            "github_auth",
+            502,
+            "GitHub token is invalid or expired. Check or remove GITHUB_TOKEN in .env.",
+        )
+    if r.status_code != 200:
+        raise AnalyzeError("upstream", 502, f"GitHub returned {r.status_code}{context}.")
 
 
 async def list_repos(username: str) -> RepoFetch:
@@ -79,9 +96,7 @@ async def list_repos(username: str) -> RepoFetch:
         raise AnalyzeError("upstream", 502, "Could not reach GitHub. Try again.")
     if r.status_code == 404:
         raise AnalyzeError("user_not_found", 404, f"No GitHub user '{username}'.")
-    _raise_if_rate_limited(r)
-    if r.status_code != 200:
-        raise AnalyzeError("upstream", 502, f"GitHub returned {r.status_code}.")
+    _raise_for_status(r)
     try:
         raw = r.json()
     except ValueError:
@@ -110,7 +125,5 @@ async def get_readme(username: str, repo: str) -> str:
         return ""
     if r.status_code == 404:
         return ""
-    _raise_if_rate_limited(r)
-    if r.status_code != 200:
-        raise AnalyzeError("upstream", 502, f"GitHub returned {r.status_code} fetching readme.")
+    _raise_for_status(r, " fetching readme")
     return r.text[: settings.readme_max_chars]

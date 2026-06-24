@@ -82,6 +82,16 @@ def test_list_repos_rate_limit(monkeypatch):
     assert exc.value.code == "github_rate_limit"
 
 
+def test_list_repos_401_is_github_auth(monkeypatch):
+    # A present-but-bad GITHUB_TOKEN → 401. Must be a distinct, actionable state, not a rate
+    # limit and not a generic 'GitHub returned 401' upstream blip.
+    _patch_get(monkeypatch, _FakeResponse(status_code=401))
+    with pytest.raises(github.AnalyzeError) as exc:
+        _list_repos("u")
+    assert exc.value.code == "github_auth"
+    assert exc.value.http_status == 502
+
+
 def test_list_repos_other_status_is_upstream(monkeypatch):
     _patch_get(monkeypatch, _FakeResponse(status_code=500))
     with pytest.raises(github.AnalyzeError) as exc:
@@ -144,6 +154,13 @@ def test_readme_rate_limit_surfaces(monkeypatch):
     with pytest.raises(github.AnalyzeError) as exc:
         _readme("u", "r")
     assert exc.value.code == "github_rate_limit"
+
+
+def test_readme_401_is_github_auth(monkeypatch):
+    _patch_get(monkeypatch, _FakeResponse(status_code=401))
+    with pytest.raises(github.AnalyzeError) as exc:
+        _readme("u", "r")
+    assert exc.value.code == "github_auth"
 
 
 def test_readme_other_status_is_upstream(monkeypatch):
