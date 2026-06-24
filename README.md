@@ -55,29 +55,29 @@ that, activate the venv and run `uvicorn` again.
 
 ## How I used AI
 
-Two parts: **AI inside the product** (the design that matters) and **AI to build it**.
+Two parts: AI inside the product, and AI to build it.
 
 ### AI inside the product
 
-The whole tool is one AI judgement per repo plus a final synthesis. Making that
-*reliable*, not just "call a model and print the text," is where the work went:
+The tool is one AI judgement per repo plus a final synthesis. Each part is one
+design choice with a reason:
 
 - **Structured output via a forced tool call.** `assess_repo` pins `tool_choice`
   to a single `submit_assessment` tool whose schema *is* the card fields, then
   validates the result through a Pydantic model — off-schema output fails closed to
   a "degraded card" instead of corrupting the response. (`backend/services/ai.py`)
-- **`temperature=0` on both calls.** These are classifications, not creative copy;
+- `temperature=0` on both calls. These are classifications, not creative copy;
   without it the same profile flipped repos between levels and reworded the verdict
-  between runs. The synthesis verdict is the headline hire signal — it must not wander.
-- **Bucketed fields with explicit rubrics, not vague scales.** `level` and
+  between runs. The synthesis verdict is the headline signal — it must not wander.
+- Bucketed fields with explicit rubrics, not vague scales. `level` and
   `readme_clarity` are enums with a defined rubric per value; `summary`,
   `complexity`, and `assessment` are word-capped — so cards stay consistent and the
   model can't inflate for stars or a pretty README.
-- **Metadata-augmented prompt.** Each call also gets the repo's language,
+- Metadata-augmented prompt. Each call also gets the repo's language,
   description, topics, stars, size, and push date (already fetched, zero extra
-  requests), so a repo with **no README** still gets a real assessment. READMEs are
+  requests), so a repo with no README still gets a real assessment. READMEs are
   truncated to ~12 KB so one giant file can't blow the token budget.
-- **Two-tier design, deterministic verdict.** After the per-repo cards resolve, one
+- Two-tier design, deterministic verdict. After the per-repo cards resolve, one
   synthesis call sees only the *rated* repos (no READMEs) and answers one question —
   junior full-stack fit? — by a fixed rule over the evidence (backend? frontend?
   data?), returned through a forced tool call so the model's reasoning can't leak
@@ -85,9 +85,8 @@ The whole tool is one AI judgement per repo plus a final synthesis. Making that
 
 ### AI to build it
 
-- **Planned before coding:** `DECISIONS.md` → `PLAN.md` → code → tests, with a
-  `TODO.md` tracking follow-ups. Decisions were settled first, then implemented
-  against the spec — with **Claude Code**.
+- Planned before coding: decisions settled first, then implemented against the
+  spec and covered with tests — with Claude Code.
 
 ---
 
@@ -201,16 +200,14 @@ profile.
 
 What it showed:
 
-- **The synthesis verdict — the headline hire signal — is stable.** It was
-  unanimous on the clear-cut profile and held the majority answer on the borderline
-  ones;
-- **`level` started as the least consistent field**, with the noise concentrated on
-  the **Basic ↔ Intermediate** boundary.
-  That drove a sharpened rubric: Basic vs. Intermediate now turns on a single
-  discriminator — *separation of responsibilities across multiple components* — with
-  an explicit "when torn, pick the lower level" tie-break. With that in place, **every
-  single-project repo now scores 100% `level` agreement across all 10 runs** —
-  including the exact repos that used to flip. The only repo that still varies is one
-  that *bundles many separate assignments*, where "separation of responsibilities" has
-  no single answer — expected ambiguity, not noise.
+- The synthesis verdict is stable. It was unanimous on the clear-cut profile and
+  held the majority answer on the borderline ones.
+- `level` started as the least consistent field, with the noise concentrated on
+  the Basic ↔ Intermediate boundary. That drove a sharpened rubric: Basic vs.
+  Intermediate now turns on a single discriminator — *separation of responsibilities
+  across multiple components* — with an explicit "when torn, pick the lower level"
+  tie-break. With that in place, every single-project repo scored the same `level`
+  across all 10 runs, including the repos that used to flip. The only repo that still
+  varies is one that bundles many separate assignments, where "separation of
+  responsibilities" has no single answer — expected ambiguity, not noise.
 

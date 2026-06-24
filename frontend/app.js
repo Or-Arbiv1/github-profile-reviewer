@@ -52,11 +52,8 @@ async function analyze(username) {
 }
 
 // ─── Render helpers ──────────────────────────────────────────────────────────
-// The level is the card's rating, shown as a single-hue ramp — quality maps to how much
-// green is present, not to different colors. Basic = colorless slate (entry), Intermediate =
-// soft emerald, Advanced = bright emerald. Emerald is the app's one accent (also focus/hover);
-// the button is intentionally neutral so nothing competes with it. `accent` colors the
-// verdict's left border so the opinion is visibly tied to the rating.
+// Level is the card's rating, shown as a single-hue ramp: slate (Basic) → emerald (Advanced).
+// `accent` colors the verdict's left border so the opinion is tied to the rating.
 const LEVEL_STYLE = {
   Basic:        { chip: 'bg-slate-500/10 text-slate-400',     accent: 'border-slate-600' },
   Intermediate: { chip: 'bg-emerald-500/10 text-emerald-300', accent: 'border-emerald-500/30' },
@@ -65,15 +62,13 @@ const LEVEL_STYLE = {
 // No level == the AI call for this repo failed; show a muted "Unrated" reading.
 const UNRATED_STYLE = { chip: 'bg-slate-700/50 text-slate-400', accent: 'border-slate-700' };
 
-// Display order: most-starred first (social proof leads), then complexity as the tiebreaker.
-// Because stars is the primary key, every starred repo sorts above the zero-star ones, and the
-// zero-star repos fall through to complexity among themselves. `complexity` is free-text with
-// no inherent order, so we rank on `level` — its ordinal equivalent (Basic→Advanced); unrated
-// sinks last. The backend still selects repos by recency — this is purely how we present them.
+// Display order: most stars first (social proof leads), level as the tiebreaker among
+// equal-star repos (unrated sinks last). The backend selects repos by recency — this is
+// purely presentation.
 const LEVEL_RANK = { Advanced: 3, Intermediate: 2, Basic: 1 };
-function byStarsThenComplexity(a, b) {
-  if (a.stars !== b.stars) return b.stars - a.stars;                 // most stars first
-  return (LEVEL_RANK[b.level] ?? 0) - (LEVEL_RANK[a.level] ?? 0);    // then by complexity (level)
+function byStarsThenLevel(a, b) {
+  if (a.stars !== b.stars) return b.stars - a.stars;
+  return (LEVEL_RANK[b.level] ?? 0) - (LEVEL_RANK[a.level] ?? 0);
 }
 
 function levelChip(level) {
@@ -84,8 +79,7 @@ function levelChip(level) {
 }
 
 // Vertical card, top → bottom: title · level · language·complexity · summary · verdict.
-// Each field gets its own line and its own weight — no inner dividers, no pill backgrounds —
-// so the structure reads through typography (size + brightness) instead of nested boxes.
+// Structure reads through typography (size + brightness), not dividers or nested boxes.
 function renderCard(repo) {
   const accent = (LEVEL_STYLE[repo.level] ?? UNRATED_STYLE).accent;
 
@@ -105,8 +99,7 @@ function renderCard(repo) {
     createEl('span', { className: 'text-amber-400/80 text-sm shrink-0' }, `★ ${repo.stars}`),
   ));
 
-  // Level: the rating, small and left-aligned under the title (the name is the headline; this
-  // is the verdict's one-word tag). Archived sits alongside it when present.
+  // Level: the rating, under the title. Archived sits alongside it when present.
   const meta = createEl('div', { className: 'flex items-center gap-2 flex-wrap' }, levelChip(repo.level));
   if (repo.archived) {
     meta.appendChild(createEl('span', {
@@ -124,15 +117,13 @@ function renderCard(repo) {
     card.appendChild(createEl('p', { className: 'font-code text-xs text-slate-400' }, facts.join('  ·  ')));
   }
 
-  // summary = neutral description ("what it is"). Quiet (slate-400), clamped — sits below the
-  // verdict in the visual hierarchy. Skipped on degraded cards where summary is null.
+  // summary = neutral "what it is", quiet and clamped. Null on degraded cards, so skipped.
   if (repo.summary) {
     card.appendChild(createEl('p', { className: 'text-slate-400 text-sm leading-snug line-clamp-2' }, repo.summary));
   }
 
-  // assessment = the verdict ("is it good, for a junior?"). The loudest body text on the card
-  // (bright slate-200); a thin accent bar in the level's color is the only inner element, tying
-  // the prose to the rating. mt-auto pins it to the card's bottom so the grid stays aligned.
+  // assessment = the verdict ("is it good, for a junior?"). Loudest body text, with a thin
+  // accent bar in the level's color. mt-auto pins it to the bottom so the grid stays aligned.
   card.appendChild(createEl('p', {
     className: `text-sm text-slate-200 leading-relaxed border-l-2 ${accent} pl-3 mt-auto`,
   }, repo.assessment));
@@ -295,7 +286,7 @@ function render() {
     banner.appendChild(renderBanner(d));
     results.appendChild(createEl('p', { className: 'text-slate-400 text-sm mb-4' }, repoSummary(d)));
     const grid = createEl('div', { className: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' });
-    for (const repo of [...d.repos].sort(byStarsThenComplexity)) grid.appendChild(renderCard(repo));
+    for (const repo of [...d.repos].sort(byStarsThenLevel)) grid.appendChild(renderCard(repo));
     results.appendChild(grid);
   }
 }

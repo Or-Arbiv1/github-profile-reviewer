@@ -32,5 +32,5 @@ class AnalyzeResponse(BaseModel):
     total_found: int = 0     # repos GitHub returned for this user (incl. forks)
     forks_excluded: int = 0  # how many of those were forks we skipped
     archived_total: int = 0  # archived repos among the user's own (non-fork) work
-    synthesis: str           # 2–3 sentence overall level summary
+    synthesis: str           # overall junior full-stack fit verdict (≤80 words)
     repos: list[RepoAssessment]
