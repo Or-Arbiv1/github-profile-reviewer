@@ -89,10 +89,11 @@ README (may be truncated):
 Return JSON only. Field constraints:
 - summary: maximum 8 words neutrally describing what the project IS (e.g. "REST API for tracking personal expenses", "CLI tool for converting markdown files"). Description only — no judgement.
 - level: exactly one of "Basic", "Intermediate", "Advanced"
-  - "Basic": scripts, tutorial follow-alongs, or single-file exercises; little structure and no real architecture
-  - "Intermediate": a single working application with sensible structure (e.g. one full-stack app, a CRUD API, a CLI with real features); demonstrates competence but stays within one well-trodden pattern
+  - "Basic": one concern carried out in a single file or a handful of files with no separation of responsibilities — a script, a tutorial follow-along, a coding exercise, or a simple game/CLI whose whole logic lives together. The kind of thing one person writes in a sitting.
+  - "Intermediate": a working application a real user could run, deliberately split into multiple components with distinct responsibilities (e.g. UI / logic / data, or routes / services / models) — a full-stack app, a CRUD API, or a feature-complete CLI. Competent, but within one well-trodden pattern.
   - "Advanced": integrates multiple services or non-trivial concerns — concurrency control, structured AI/tool calling, production handling (error paths, retries, rate limits), or thoughtful architecture beyond a single straightforward app
-  - Judge the strongest evidence in the repo; do NOT inflate for stars or a polished README alone
+  - Decide Basic vs. Intermediate by ONE discriminator: separation of responsibilities across multiple components. No separation → "Basic". Clear separation AND a real user could run it → at least "Intermediate". Plus an Advanced concern above → "Advanced". A game, exercise, or single-purpose script is "Basic" however polished, unless it shows that separation.
+  - When genuinely torn between two levels, choose the LOWER one. Judge the strongest evidence in the repo; do NOT inflate for stars or a polished README alone
 - readme_clarity: exactly one of "Clear", "Adequate", "Sparse", "Trivial", "Missing"
   - "Missing": no README file exists
   - "Trivial": README exists but contains only auto-generated content (repo name or GitHub's default template, no real writing)

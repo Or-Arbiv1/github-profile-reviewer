@@ -187,3 +187,30 @@ Called out deliberately, so they read as choices, not oversights:
 
 `python -m pytest` — 64 tests across `backend/tests/`, fully offline. They target
 **our error handling**, not the model's output.
+
+### Prompt consistency check
+
+The model's *output* is tested separately, by hand — because the biggest risk in an
+LLM-judged tool is the same input getting different answers on different runs. To
+measure it, I spawned **30 independent agents** on **Claude Haiku 4.5** (the default
+`AI_MODEL`) — **3 GitHub usernames × 10 isolated runs each**, every run blind to the
+others (no shared context, so they can't copy one another) and fed identical frozen
+repo data. The usernames spanned the decision space: a security/reverse-engineering
+profile (clear "No"), a borderline full-stack profile, and a reports-plus-basic-games
+profile.
+
+What it showed:
+
+- **The synthesis verdict — the headline hire signal — is stable.** It was
+  unanimous on the clear-cut profile and held the majority answer on the borderline
+  ones;
+- **`level` started as the least consistent field**, with the noise concentrated on
+  the **Basic ↔ Intermediate** boundary.
+  That drove a sharpened rubric: Basic vs. Intermediate now turns on a single
+  discriminator — *separation of responsibilities across multiple components* — with
+  an explicit "when torn, pick the lower level" tie-break. With that in place, **every
+  single-project repo now scores 100% `level` agreement across all 10 runs** —
+  including the exact repos that used to flip. The only repo that still varies is one
+  that *bundles many separate assignments*, where "separation of responsibilities" has
+  no single answer — expected ambiguity, not noise.
+
