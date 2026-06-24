@@ -30,7 +30,7 @@ You'll need **Python 3.12.6** and internet connection.
 ```bash
 git clone https://github.com/Or-Arbiv1/github-profile-reviewer.git
 cd github-profile-reviewer
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env          # then paste your keys (see below) and save
